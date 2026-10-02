@@ -1,6 +1,5 @@
 let ouvindo = false;
 let glidiaFalando = false;
-let intervaloLembretes = null;
 
 function atualizarStatus(texto) {
 const status = document.getElementById("status");
@@ -14,8 +13,9 @@ if (status) {
 }
 
 function glidiaFalar(texto, depois) {
-glidiaFalando = true;
 
+
+glidiaFalando = true;
 
 if (voz && ouvindo) {
     try {
@@ -36,13 +36,12 @@ fala.rate = 1;
 fala.pitch = 1;
 
 fala.onend = function () {
+
     glidiaFalando = false;
 
-    setTimeout(() => {
-        if (depois) {
-            depois();
-        }
-    }, 500);
+    if (depois) {
+        depois();
+    }
 };
 
 speechSynthesis.speak(fala);
@@ -57,8 +56,9 @@ window.webkitSpeechRecognition;
 let voz = null;
 
 if (ReconhecimentoVoz) {
-voz = new ReconhecimentoVoz();
 
+
+voz = new ReconhecimentoVoz();
 
 voz.lang = "pt-BR";
 voz.continuous = false;
@@ -66,47 +66,56 @@ voz.interimResults = false;
 voz.maxAlternatives = 1;
 
 voz.onstart = function () {
+
     ouvindo = true;
 
-    atualizarStatus(
-        "🎤 Estou ouvindo..."
-    );
+    atualizarStatus("🎤 Estou ouvindo...");
 };
 
 voz.onend = function () {
+
     ouvindo = false;
 };
 
 voz.onerror = function (erro) {
-    console.log(
-        "Erro voz:",
-        erro
-    );
+
+    console.log("Erro voz:", erro);
 
     ouvindo = false;
 
+    if (erro.error === "no-speech") {
+
+        atualizarStatus(
+            "Pressione o botão para falar novamente."
+        );
+
+        return;
+    }
+
+    if (erro.error === "not-allowed") {
+
+        atualizarStatus(
+            "Permissão do microfone bloqueada."
+        );
+
+        return;
+    }
+
     atualizarStatus(
-        "❌ Não consegui ouvir"
+        "Não foi possível ouvir. Pressione o botão para tentar novamente."
     );
 };
 
 voz.onresult = function (event) {
+
     let comando = event.results[0][0]
         .transcript
         .toLowerCase()
         .trim();
 
-    console.log(
-        "Reconhecido:",
-        comando
-    );
+    console.log("Reconhecido:", comando);
 
     if (glidiaFalando) {
-        console.log(
-            "Ignorando reconhecimento enquanto Glidia fala:",
-            comando
-        );
-
         return;
     }
 
@@ -129,13 +138,10 @@ voz.onresult = function (event) {
         palavrasSemSentido.includes(comando) ||
         comando.length < 2
     ) {
-        atualizarStatus(
-            "🎤 Não entendi. Pode repetir?"
-        );
 
-        setTimeout(() => {
-            iniciarEscuta();
-        }, 500);
+        atualizarStatus(
+            "Pressione o botão para falar novamente."
+        );
 
         return;
     }
@@ -144,21 +150,30 @@ voz.onresult = function (event) {
         "🤖 Entendi: " + comando
     );
 
-    enviarComando(comando);
+    processarComando(comando);
 };
 
 
 }
 
 function botaoBengala() {
+
+
 iniciarGlidia();
+
+
 }
 
 function iniciarGlidia() {
-atualizarStatus(
-"🟢 Glidia ativada"
-);
 
+
+if (glidiaFalando || ouvindo) {
+    return;
+}
+
+atualizarStatus(
+    "🟢 Glídia ativada"
+);
 
 glidiaFalar(
     "Olá! Como posso te ajudar?",
@@ -167,17 +182,17 @@ glidiaFalar(
     }
 );
 
-iniciarVerificacaoLembretes();
-
 
 }
 
 function iniciarEscuta() {
-if (!voz) {
-glidiaFalar(
-"Seu navegador não suporta reconhecimento de voz."
-);
 
+
+if (!voz) {
+
+    atualizarStatus(
+        "Seu navegador não suporta reconhecimento de voz."
+    );
 
     return;
 }
@@ -191,8 +206,11 @@ if (ouvindo) {
 }
 
 try {
+
     voz.start();
+
 } catch (e) {
+
     console.log(
         "Erro ao iniciar reconhecimento:",
         e
@@ -202,13 +220,96 @@ try {
 
 }
 
-async function enviarComando(comando) {
-try {
-const resposta = await fetch(
-"http://localhost:3000/comando",
-{
-method: "POST",
+function processarComando(comando) {
 
+
+if (
+    comando.includes("gps") ||
+    comando.includes("mapa") ||
+    comando.includes("google maps") ||
+    comando.includes("localização") ||
+    comando.includes("localizacao") ||
+    comando.includes("navegação") ||
+    comando.includes("navegacao")
+) {
+
+    abrirGPS();
+    return;
+}
+
+if (
+    comando.includes("uber") ||
+    comando.includes("chamar um carro") ||
+    comando.includes("chamar carro") ||
+    comando.includes("quero um carro")
+) {
+
+    abrirUber();
+    return;
+}
+
+enviarComando(comando);
+
+
+}
+
+function abrirGPS() {
+
+
+const url =
+    "https://www.google.com/maps/search/?api=1&query=Google+Maps";
+
+atualizarStatus(
+    "📍 Abrindo GPS..."
+);
+
+glidiaFalar(
+    "Abrindo o GPS.",
+    function () {
+
+        window.open(
+            url,
+            "_blank"
+        );
+    }
+);
+
+
+}
+
+function abrirUber() {
+
+
+const url =
+    "https://m.uber.com/";
+
+atualizarStatus(
+    "🚖 Abrindo Uber..."
+);
+
+glidiaFalar(
+    "Abrindo o Uber.",
+    function () {
+
+        window.open(
+            url,
+            "_blank"
+        );
+    }
+);
+
+
+}
+
+async function enviarComando(comando) {
+
+
+try {
+
+    const resposta = await fetch(
+        "http://localhost:3000/comando",
+        {
+            method: "POST",
 
             headers: {
                 "Content-Type": "application/json"
@@ -221,9 +322,9 @@ method: "POST",
     );
 
     if (!resposta.ok) {
+
         throw new Error(
-            "Erro HTTP: " +
-            resposta.status
+            "Erro HTTP: " + resposta.status
         );
     }
 
@@ -235,143 +336,35 @@ method: "POST",
     );
 
     if (dados.resposta) {
+
         atualizarStatus(
             "🤖 " + dados.resposta
         );
 
         glidiaFalar(
-            dados.resposta,
-            function () {
-                iniciarEscuta();
-            }
+            dados.resposta
         );
 
         return;
     }
 
     atualizarStatus(
-        "❌ Resposta inválida"
+        "Resposta inválida."
     );
 
-    glidiaFalar(
-        "O sistema não retornou uma resposta.",
-        function () {
-            iniciarEscuta();
-        }
-    );
 } catch (erro) {
+
     console.log(
-        "Erro ao conectar com Glidia:",
+        "Erro ao conectar com Glídia:",
         erro
     );
 
     atualizarStatus(
-        "❌ Erro de conexão"
+        "Erro de conexão com o sistema."
     );
 
     glidiaFalar(
-        "Não consegui conectar ao sistema.",
-        function () {
-            iniciarEscuta();
-        }
-    );
-}
-
-
-}
-
-function iniciarVerificacaoLembretes() {
-if (intervaloLembretes) {
-return;
-}
-
-
-verificarLembretes();
-
-intervaloLembretes = setInterval(
-    verificarLembretes,
-    5000
-);
-
-
-}
-
-async function verificarLembretes() {
-if (glidiaFalando) {
-return;
-}
-
-
-try {
-    const resposta = await fetch(
-        "http://localhost:3000/lembretes/avisar"
-    );
-
-    if (!resposta.ok) {
-        throw new Error(
-            "Erro HTTP: " +
-            resposta.status
-        );
-    }
-
-    const dados = await resposta.json();
-
-    console.log(
-        "Verificação de lembretes:",
-        dados
-    );
-
-    if (
-        !dados.sucesso ||
-        !dados.lembretes ||
-        dados.lembretes.length === 0
-    ) {
-        return;
-    }
-
-    const lembrete = dados.lembretes[0];
-
-    let dataFormatada = lembrete.data;
-
-    if (typeof dataFormatada === "string") {
-        if (dataFormatada.includes("T")) {
-            dataFormatada =
-                dataFormatada
-                    .split("T")[0]
-                    .split("-")
-                    .reverse()
-                    .join("/");
-        } else if (dataFormatada.includes("-")) {
-            dataFormatada =
-                dataFormatada
-                    .split("-")
-                    .reverse()
-                    .join("/");
-        }
-    }
-
-    let horaFormatada = lembrete.hora || "";
-
-    if (horaFormatada.length >= 5) {
-        horaFormatada =
-            horaFormatada.substring(0, 5);
-    }
-
-    atualizarStatus(
-        "⏰ Lembrete: " +
-        lembrete.nome
-    );
-
-    glidiaFalar(
-        `Atenção. Você tem um lembrete. ${lembrete.nome}. Agendado para ${dataFormatada} às ${horaFormatada}.`,
-        function () {
-            iniciarEscuta();
-        }
-    );
-} catch (erro) {
-    console.log(
-        "Erro ao verificar lembretes:",
-        erro
+        "Não consegui conectar ao sistema."
     );
 }
 
